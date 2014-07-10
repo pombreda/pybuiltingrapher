@@ -1,18 +1,13 @@
 import argparse
 import re
 import shlex
+import json
 
 from regexes import *
 
-# Command Line arguments
-parser = argparse.ArgumentParser(description="Naive grapher for modules in python standard lib, written in C.")
-parser.add_argument('files', metavar='N', type=str, nargs='+',
-                   help='.c modules to parse')
-args = parser.parse_args()
 
-for filename in args.files:
-  code = open(filename).read()
 
+def graph(code):
   def rangeFor(segment):
     start = code.find(segment)
     end = start + len(segment)
@@ -82,3 +77,14 @@ for filename in args.files:
     print "\n##### Objects #####"
     for obj in objects:
       print obj
+
+# Command Line invocation
+if __name__ == "__main__":
+  parser = argparse.ArgumentParser(description="Naive grapher for modules in python standard lib, written in C.")
+  parser.add_argument('files', metavar='N', type=str, nargs='+',
+                     help='.c modules to parse')
+  args = parser.parse_args()
+
+  for filename in args.files:
+    code = open(filename).read()
+    graph(code)
