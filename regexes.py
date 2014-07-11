@@ -1,47 +1,30 @@
 import re
 
-PyModuleDef = re.compile("""
-static\s*struct\s*PyModuleDef\s*([\w]*)\s*=\s*{
-\s*PyModuleDef_HEAD_INIT*\s*,
-\s*"(.*)",
-\s*(\w*),
-\s*\S*,
-\s*(\w*),
-\s*\S*,
-\s*\S*,
-\s*\S*,
-\s*\S*
-\s*};
-""",re.VERBOSE)
+PyModuleDef = """
+static\s*struct\s*PyModuleDef\s*
+(?P<struct_name>\w*)\s*=\s*{
+\s*PyModuleDef_HEAD_INIT\s*,
+\s*"%s"\s*,
+\s*(\w*)\s*,
+\s*(\S*)\s*,
+\s*(?P<method_table>\w*)\s*,
+\s*(\w*)\s*,
+\s*(\w*)\s*,
+\s*(\w*)\s*,
+\s*(\w*)\s*
+};
+"""
 
-PyDoc_STRVAR = re.compile("""
-PyDoc_STRVAR\(\s*
-(\w*)\s*,
-\s*"
-((?:\\"|.)*?) #Will only match the inside of the string
-"\);
-""", re.VERBOSE | re.DOTALL)
+PyMethodDef = """
+{\s*"%s"\s*,.*,.*,.*}
+"""
 
-PyModule_Create = re.compile("""
-(\w*)\s*=\s*PyModule_Create\(&(\w*)\);
-""", re.VERBOSE)
+PyModule_AddObject = """
+PyModule_AddObject(.*,\s*"%s"\s*,.*);
+"""
 
-PyMethodDef = re.compile("""
-static\s*PyMethodDef\s*(\w*)\[\]\s*=\s*{
-(.*)
-{\s*NULL\s*,\s*NULL\s*}
-""", re.VERBOSE | re.DOTALL)
-
-# TODO
-PyModule_AddObject = re.compile("""
-PyModule_AddObject\(
-\s*
-(?P<module>\w*)
-\s*,
-\s*"
-(?P<symbol>\w*)
-""", re.VERBOSE)
-
-# TODO
-MATHMACRO_FUNC1 = re.compile("""
-""", re.VERBOSE | re.DOTALL)
+PyTypeObject = """
+static\s*PyTypeObject\s*(\w*)\s*=\s*{
+\s*PyVarObject_HEAD_INIT\(\s*NULL\s*,\s*0\s*\)\s*
+"%s"\s*,\s*
+"""

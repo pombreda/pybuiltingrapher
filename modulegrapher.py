@@ -5,7 +5,7 @@ import importlib
 import inspect
 import copy
 
-from regexes import *
+import regexes
 
 Unit = "Python"
 UnitType = "PipPackage"
@@ -16,28 +16,81 @@ def recursable(live_object):
   only modules and classes.'''
   return inspect.ismodule(live_object)
 
-def exportable(live_object):
-  return inspect.ismodule(live_object) or inspect.isroutine(live_object)
+def find_location(path, name, live_object, code):
+  '''Naive attempt to find location of object definition in C source file.'''
+  if inspect.ismodule(live_object):
+    # Find struct that defines the module
+    PyModuleDef = re.compile(regexes.PyModuleDef % name, re.VERBOSE)
+    match = PyModuleDef.search(code)
+    if match:
+      return match.start(), match.end()
+
+  elif inspect.isroutine(live_object):
+    # Find entry in method table
+    PyMethodDef = re.compile(regexes.PyMethodDef % name, re.VERBOSE)
+    match = PyMethodDef.search(code)
+    if match:
+      return match.start(), match.end()
+
+  elif inspect.isclass(live_object):
+    # Find PyTypeObject structs
+    PyTypeObject = re.compile(regexes.PyTypeObject % (path.replace("/", ".")), re.VERBOSE)
+    match = PyTypeObject.search(code)
+    if match:
+      return match.start(), match.end()
+
+  else:
+    # Look for a matching Add Object call
+    PyModule_AddObject = re.compile(regexes.PyModule_AddObject % name, re.VERBOSE)
+    match = PyModule_AddObject.search(code)
+    if match:
+      return match.start(), match.end()
+
+  return 0,0
+
+def exportable(name, live_object):
+  '''Return True if this is a object that we want to export'''
+  return (inspect.ismodule(live_object)
+    or inspect.isroutine(live_object)
+    or inspect.isclass(live_object)
+    or type(live_object) is str
+    or type(live_object) is float
+    or type(live_object) is dict
+    or type(live_object) is list)
 
 def get_kind(live_object):
   if inspect.ismodule(live_object):
     return "module"
-  if inspect.isroutine(live_object):
+  elif inspect.isroutine(live_object):
     return "func"
+  elif inspect.isclass(live_object):
+    return "type"
+  else:
+    return "var"
 
 def is_callable(live_object):
   if inspect.ismodule(live_object):
     return False
-  if inspect.isroutine(live_object):
+  elif inspect.isroutine(live_object):
     return True
+  elif inspect.isclass(live_object):
+    return False
+  else:
+    False
 
 def data_field(live_object):
   data = {}
   if inspect.ismodule(live_object):
     data['Kind'] = "module"
     data['FuncSignature'] = ""
-  if inspect.isroutine(live_object):
+  elif inspect.isroutine(live_object):
     data['Kind'] = "function"
+    data['FuncSignature'] = ""
+  elif inspect.isclass(live_object):
+    data['Kind'] = "class"
+    data['FuncSignature'] = ""
+  else:
+    data['Kind'] = "scope"
     data['FuncSignature'] = ""
   return data
 
@@ -47,6 +100,7 @@ def graph(module_name, filename):
     "Unit" : Unit,
     "File" : filename
   }
+
   # Load source file
   code = "" if filename == None else open(filename).read()
 
@@ -57,15 +111,17 @@ def graph(module_name, filename):
 
   def analyze(path, name, live_object):
     # If this is not a supported type of symbol, return
-    if not exportable(live_object): return
+    if not exportable(name, live_object): return
+
+    start, end = find_location(path, name, live_object, code)
 
     # Create Symbol
     symbol = copy.deepcopy(common)
     symbol.update({
       "Kind" : get_kind(live_object),
       "Name" : name,
-      "DefStart" : 0,
-      "DefEnd" : 0,
+      "DefStart" : start,
+      "DefEnd" : end,
       "Callable" : is_callable(live_object),
       "Exported" : True,
       "Path" : path,
@@ -77,9 +133,9 @@ def graph(module_name, filename):
     # Create Doc
     doc = copy.deepcopy(common)
     doc.update({
-      "End" : 0,
+      "Start" : start,
+      "End" : end,
       "Format" : "text/plain",
-      "Start" : 0,
       "Path" : path,
       "Data" : inspect.getdoc(live_object),
     })
@@ -91,8 +147,10 @@ def graph(module_name, filename):
 
   analyze(module_name, module_name, module)
 
-  print json.dumps(symbols, indent=1)
-  print json.dumps(docs, indent=1)
+  print json.dumps({
+    "Symbols" : symbols,
+    "Docs" : docs
+  }, indent=2)
 
 # Command Line invocation
 if __name__ == "__main__":
