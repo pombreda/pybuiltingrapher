@@ -1,90 +1,104 @@
 import argparse
 import re
-import shlex
 import json
+import importlib
+import inspect
+import copy
 
 from regexes import *
 
+Unit = "Python"
+UnitType = "PipPackage"
 
+def recursable(live_object):
+  '''Helper function to determine if an object
+  should be recursed into during inspection. Currently
+  only modules and classes.'''
+  return inspect.ismodule(live_object)
 
-def graph(code):
-  def rangeFor(segment):
-    start = code.find(segment)
-    end = start + len(segment)
-    return str(start) + "-" + str(end)
+def exportable(live_object):
+  return inspect.ismodule(live_object) or inspect.isroutine(live_object)
 
-  def mergeDocstring(docstring):
-    linemerge = "".join(re.split('"\s*\n\s*"', docstring))
-    return linemerge.replace("\\n", "\n")
+def get_kind(live_object):
+  if inspect.ismodule(live_object):
+    return "module"
+  if inspect.isroutine(live_object):
+    return "func"
 
-  objects_by_module = {}
-  for match in PyModule_AddObject.finditer(code):
-    if match.groupdict()['module'] not in objects_by_module:
-      objects_by_module[match.groupdict()['module']] = []
+def is_callable(live_object):
+  if inspect.ismodule(live_object):
+    return False
+  if inspect.isroutine(live_object):
+    return True
 
-    object_table = {
-      "symbol" : match.groupdict()['symbol'],
-      "range" : str(match.start()) + "-" + str(match.end())
-    }
-    objects_by_module[match.groupdict()['module']].append(object_table)
+def data_field(live_object):
+  data = {}
+  if inspect.ismodule(live_object):
+    data['Kind'] = "module"
+    data['FuncSignature'] = ""
+  if inspect.isroutine(live_object):
+    data['Kind'] = "function"
+    data['FuncSignature'] = ""
+  return data
 
-  doc_strings = {}
-  for match in PyDoc_STRVAR.findall(code):
-    doc_strings[match[0]] = match[1]
+def graph(module_name, filename):
+  common = {
+    "UnitType" : UnitType,
+    "Unit" : Unit,
+    "File" : filename
+  }
+  # Load source file
+  code = "" if filename == None else open(filename).read()
 
-  module_defs = {}
-  for match in PyModuleDef.findall(code):
-    module_defs[match[0]] = match
+  module = importlib.import_module(module_name)
 
-  created_modules = {}
-  for match in PyModule_Create.findall(code):
-    created_modules[match[0]] = match[1]
+  symbols = []
+  docs = []
 
-  method_tables = {}
-  for match in PyMethodDef.findall(code):
-    table = {}
-    for line in re.split("},\s*{", match[1].strip().strip("{},")):
-      words = line.split(",")
+  def analyze(path, name, live_object):
+    # If this is not a supported type of symbol, return
+    if not exportable(live_object): return
 
-      method = {}
-      method['name'] = words[0].strip().strip('"')
-      method['cfunction'] = words[1].strip().strip('"')
-      method['type'] = words[2].strip().strip('"')
-      method['range'] = rangeFor(line)
+    # Create Symbol
+    symbol = copy.deepcopy(common)
+    symbol.update({
+      "Kind" : get_kind(live_object),
+      "Name" : name,
+      "DefStart" : 0,
+      "DefEnd" : 0,
+      "Callable" : is_callable(live_object),
+      "Exported" : True,
+      "Path" : path,
+      "Data" : data_field(live_object),
+      "TreePath" : path
+    })
+    symbols.append(symbol)
 
-      docstring_var = words[3].strip().strip('"')
-      if docstring_var in doc_strings:
-        method['docstring'] = doc_strings[docstring_var]
+    # Create Doc
+    doc = copy.deepcopy(common)
+    doc.update({
+      "End" : 0,
+      "Format" : "text/plain",
+      "Start" : 0,
+      "Path" : path,
+      "Data" : inspect.getdoc(live_object),
+    })
+    docs.append(doc)
 
-      table[method['name']] = method
-    method_tables[match[0]] = table
+    if recursable(live_object):
+      for member in inspect.getmembers(live_object):
+        analyze(path + "/" + member[0], member[0], member[1])
 
-  for module in created_modules:
-    module_struct = created_modules[module]
-    module_name = module_defs[module_struct][1]
-    module_doc = doc_strings[module_defs[module_struct][2]]
+  analyze(module_name, module_name, module)
 
-    method_table = method_tables[module_defs[module_struct][3]]
-    objects = objects_by_module[module]
-
-    print module_name
-    print mergeDocstring(module_doc)
-
-    print "\n##### Methods #####"
-    for method in method_table.values():
-      print method
-
-    print "\n##### Objects #####"
-    for obj in objects:
-      print obj
+  print json.dumps(symbols, indent=1)
+  print json.dumps(docs, indent=1)
 
 # Command Line invocation
 if __name__ == "__main__":
-  parser = argparse.ArgumentParser(description="Naive grapher for modules in python standard lib, written in C.")
-  parser.add_argument('files', metavar='N', type=str, nargs='+',
-                     help='.c modules to parse')
-  args = parser.parse_args()
+  parser = argparse.ArgumentParser(description="Grapher for modules in python standard lib, intended to be used for modules written in C.")
+  parser.add_argument('-m', '--module', type=str, help="The name of the module, eg: math, cmath, or gc.")
+  parser.add_argument('-s', '--source', type=str, help="The C source for the module. This will allow the grapher to try and find line numbers, though this is merely an optional heuristic.")
 
-  for filename in args.files:
-    code = open(filename).read()
-    graph(code)
+  args = parser.parse_args()
+  graph(args.module, args.source)
