@@ -1,6 +1,4 @@
-import argparse
 import re
-import json
 import importlib
 import inspect
 import copy
@@ -136,8 +134,8 @@ def graph(module_name, filename):
     # Create Doc
     doc = copy.deepcopy(common)
     doc.update({
-      "Start" : start,
-      "End" : end,
+      "Start" : 0,
+      "End" : 0,
       "Format" : "text/plain",
       "Path" : path,
       "Data" : inspect.getdoc(live_object),
@@ -150,16 +148,4 @@ def graph(module_name, filename):
 
   analyze(module_name, module_name, module)
 
-  print json.dumps({
-    "Symbols" : symbols,
-    "Docs" : docs
-  }, indent=2)
-
-# Command Line invocation
-if __name__ == "__main__":
-  parser = argparse.ArgumentParser(description="Grapher for modules in python standard lib, intended to be used for modules written in C.")
-  parser.add_argument('-m', '--module', type=str, help="The name of the module, eg: math, cmath, or gc.")
-  parser.add_argument('-s', '--source', type=str, help="The C source for the module. This will allow the grapher to try and find line numbers, though this is merely an optional heuristic.")
-
-  args = parser.parse_args()
-  graph(args.module, args.source)
+  return symbols, docs
