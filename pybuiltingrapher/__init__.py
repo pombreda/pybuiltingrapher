@@ -95,7 +95,7 @@ def data_field(live_object):
     data['FuncSignature'] = ""
   return data
 
-def graph(module_name, filename):
+def graph(module_name, rootdir, filename):
   common = {
     "UnitType" : UnitType,
     "Unit" : Unit,
@@ -103,7 +103,7 @@ def graph(module_name, filename):
   }
 
   # Load source file
-  code = "" if filename == None else open(filename).read()
+  code = "" if filename == None else open(rootdir + "/" + filename).read()
 
   module = importlib.import_module(module_name)
 

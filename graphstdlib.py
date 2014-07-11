@@ -11,18 +11,19 @@ modules = {
 
 # Command Line invocation
 if __name__ == "__main__":
-  parser = argparse.ArgumentParser(description="Grapher for modules in python standard lib, intended to be used for modules written in C. Invoke in the root directory of the CPython repository.")
+  parser = argparse.ArgumentParser(description="Grapher for modules in python standard lib, intended to be used for modules written in C.")
+  parser.add_argument("cpythondir", help="The root directory of the CPython repository. Should have a Modules folder in it.")
   args = parser.parse_args()
 
   symbols = []
   docs = []
 
   for module,filename in modules.items():
-    module_symbols, module_docs = graph(module, filename)
+    module_symbols, module_docs = graph(module, args.cpythondir, filename)
     symbols.extend(module_symbols)
     docs.extend(module_docs)
 
   print json.dumps({
     "Symbols" : symbols,
-    "Docs" : doc
+    "Docs" : docs
   })
