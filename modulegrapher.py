@@ -50,6 +50,9 @@ def find_location(path, name, live_object, code):
 
 def exportable(name, live_object):
   '''Return True if this is a object that we want to export'''
+
+  if re.match("__.*__", name): return False
+
   return (inspect.ismodule(live_object)
     or inspect.isroutine(live_object)
     or inspect.isclass(live_object)
