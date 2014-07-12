@@ -2,7 +2,7 @@ modules = {
   "math" : "Modules/mathmodule.c",
   "cmath" : "Modules/cmathmodule.c",
   "zlib" : "Modules/zlibmodule.c",
-  "zibimport" : "Modules/zipimport.c",
+  "zipimport" : "Modules/zipimport.c",
   "unicodedata" : "Modules/unicodedata.c",
   "xxsubtype" : "Modules/xxsubtype.c",
   "time" : "Modules/timemodule.c",
