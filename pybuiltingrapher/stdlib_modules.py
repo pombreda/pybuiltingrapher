@@ -8,7 +8,7 @@ modules = {
   "time" : "Modules/timemodule.c",
   "termios" : "Modules/termios.c",
   "syslog" : "Modules/syslogmodule.c",
-  "_symbtable" : "Modules/symtablemodule.c",
+  "_symtable" : "Modules/symtablemodule.c",
   "spwd" : "Modules/spwdmodule.c",
   "_socket" : "Modules/socketmodule.c",
   "_signal" : "Modules/signalmodule.c",
@@ -79,7 +79,7 @@ modules = {
   "_sqlite3" : "Modules/_sqlite/module.c",
   "_multiprocessing" : "Modules/_multiprocessing/multiprocessing.c",
   "_io" : "Modules/_io/_iomodule.c",
-  "decimal" : "Modules/_decimal/_decimal.c",
+  "_decimal" : "Modules/_decimal/_decimal.c",
   "_ctypes" : "Modules/_ctypes/_ctypes.c",
   "_ctypes_test" : "Modules/_ctypes/_ctypes_test.c",
 
