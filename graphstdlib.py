@@ -17,13 +17,16 @@ if __name__ == "__main__":
 
   symbols = []
   docs = []
+  refs = []
 
   for module,filename in modules.items():
-    module_symbols, module_docs = graph(module, args.cpythondir, filename)
+    module_symbols, module_docs, module_refs = graph(module, args.cpythondir, filename)
     symbols.extend(module_symbols)
     docs.extend(module_docs)
+    refs.extend(module_refs)
 
   print json.dumps({
     "Symbols" : symbols,
-    "Docs" : docs
+    "Docs" : docs,
+    "Refs" : refs
   })

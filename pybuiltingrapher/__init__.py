@@ -109,6 +109,7 @@ def graph(module_name, rootdir, filename):
 
   symbols = []
   docs = []
+  refs = []
 
   def analyze(path, name, live_object):
     # If this is not a supported type of symbol, return
@@ -131,6 +132,20 @@ def graph(module_name, rootdir, filename):
     })
     symbols.append(symbol)
 
+    # Create identity reference for Symbol
+    ref = copy.deepcopy(common)
+    ref.update({
+      "SymbolUnitType" : symbol['UnitType'],
+      "SymbolUnit" : symbol['Unit'],
+      "SymbolRepo" : "",
+      "SymbolPath" : symbol['Path'],
+      "Repo" : "",
+      "Start" : start,
+      "End" : end,
+      "Def" : True
+    })
+    refs.append(ref)
+
     # Create Doc
     doc = copy.deepcopy(common)
     doc.update({
@@ -148,4 +163,4 @@ def graph(module_name, rootdir, filename):
 
   analyze(module_name, module_name, module)
 
-  return symbols, docs
+  return symbols, docs, refs
