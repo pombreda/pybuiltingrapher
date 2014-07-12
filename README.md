@@ -58,5 +58,6 @@
 ```
 
 ## Todo
+- Export methods of Types - important for io module
 - Generalize to any python extension written in C.
   - NumPy, SciPi, etc.

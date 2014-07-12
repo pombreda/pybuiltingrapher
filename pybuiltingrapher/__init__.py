@@ -3,7 +3,7 @@ import importlib
 import inspect
 import copy
 
-import regexes
+from pybuiltingrapher import regexes
 
 Unit = "Python"
 UnitType = "PipPackage"
