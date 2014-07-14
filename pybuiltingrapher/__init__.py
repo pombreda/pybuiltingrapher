@@ -57,7 +57,8 @@ def exportable(name, live_object):
     or type(live_object) is str
     or type(live_object) is float
     or type(live_object) is dict
-    or type(live_object) is list)
+    or type(live_object) is list
+    or type(live_object) is int)
 
 def get_kind(live_object):
   if inspect.ismodule(live_object):
