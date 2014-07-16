@@ -97,6 +97,9 @@ def data_field(live_object):
   return data
 
 def graph(module_name, rootdir, filename):
+  '''Returns the sourcegraph formatted graph of the module, separated
+  into Symbols, Docs, and Refs'''
+
   common = {
     "UnitType" : UnitType,
     "Unit" : Unit,
@@ -104,7 +107,12 @@ def graph(module_name, rootdir, filename):
   }
 
   # Load source file
-  code = "" if filename == None else open(rootdir + "/" + filename).read()
+  code = ""
+  try:
+    code = open(rootdir + "/" + filename).read()
+  except:
+    # Continue, even if file could not be opened
+    sys.stderr.write("Could not fild file " + rootdir + "/" + filename + "\n")
 
   module = importlib.import_module(module_name)
 
@@ -165,3 +173,41 @@ def graph(module_name, rootdir, filename):
   analyze(module_name, module_name, module)
 
   return symbols, docs, refs
+
+def create_fake(module_name):
+  '''Creates a fake .py module that happends to export the same symbols as the the given builtin module.'''
+  module = importlib.import_module(module_name)
+
+  def fake(object_name, live_object):
+    # If this is not a supported type of symbol, return
+    if not exportable(object_name, live_object): return None
+
+    member_fakes = []
+    if recursable(live_object):
+      for member in inspect.getmembers(live_object):
+        result = fake(member[0], member[1])
+        if result != None:
+          member_fakes.append(result)
+
+    if type(live_object) is str:
+      return object_name + " = 'fake'"
+    elif type(live_object) is int:
+      return object_name + " = 0"
+    elif type(live_object) is float:
+      return object_name + " = 0.0"
+    elif type(live_object) is list:
+      return object_name + " = []"
+    elif type(live_object) is dict:
+      return object_name + " = {}"
+    elif inspect.ismodule(live_object):
+      return "\n".join(member_fakes)
+    elif inspect.isroutine(live_object):
+      return "def %s(): return" % object_name
+    elif inspect.isclass(live_object):
+      indented = map(lambda x: "\t" + x, member_fakes) # Class members must be indented
+      classbody = "\n".join(indented) if len(member_fakes) > 0 else "\tpass"
+      return "class %s:\n%s" % (object_name, classbody)
+    else:
+      return ""
+
+  return fake(module_name, module)
